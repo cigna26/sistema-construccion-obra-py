@@ -5,15 +5,14 @@ from hashlib import md5
 import time
 from fpdf import FPDF
 from datetime import datetime
+from os import system
+
 # Instalaciones:
 # pip install pymysql
 # pip install fpdf
 # pip install pwinput
 # pip install mysql.connector
 # pip install tabulate
-
-from os import system
-
 
 
 class DataBaseMD5():
@@ -22,7 +21,7 @@ class DataBaseMD5():
             host='localhost',
             user='root',
             password='carlos123',
-            database='certamen'
+            database='empresa'
         )
         self.cursor = self.conexion.cursor()
 
@@ -106,27 +105,23 @@ class DataBaseMD5():
         try:
             self.cursor.execute(sql)
             repu = self.cursor.fetchall()
-            print((
-            f"{'ID Constructora':10}"
-            f"{'Fono ':20}"
-            f"{'Email ':12}"
-            ))
-            for rep in repu:
-                print(f"{rep[0]:10}{rep[1]:20}{rep[2]:12}")
+            if repu:
+                headers = ["ID Constructora", "Fono", "Email"]
+                
+                print(tabulate(repu, headers=headers, tablefmt="grid"))
+                
         except Exception as err:
             print(err)
             
     #CREATE
     def create_constructora(self):
         id_constructora = input('Ingrese ID de la constructora= \n')
-        
-        #if not id_constructora.isalnum() or len(id_constructora) != 10:
-        #    raise ValueError("El código debe ser un valor alfanumérico de exactamente 10 caracteres.")
-        
+
         sql1 = 'select idConstructora from constructoras where idConstructora ='+repr(id_constructora)
+        
         try:
-            self.cursor.execute(sql1)
-            if self.cursor.fetchone() == None:
+            self.cursor.execute(sql1) 
+            if self.cursor.fetchone() == None: 
                 fono = input('Fono = \n') 
                 email = input('Email \n')
                 sql2 = "insert into constructoras values("+repr(id_constructora)+","+repr(fono)+","+repr(email)+")"
@@ -134,6 +129,20 @@ class DataBaseMD5():
                     self.cursor.execute(sql2)
                     self.conexion.commit()  
                     print("Constructora creada exitosamente") 
+                    
+                    sql_idbuscado = f"SELECT * FROM constructoras WHERE idconstructora = {repr(id_constructora)}"
+                    try: 
+                        self.cursor.execute(sql_idbuscado)# Ejecutar la consulta SQL
+                        rep = self.cursor.fetchone() # Obtener el resultado
+                        if rep is not None: #Si rep es distinto de ninguno
+                            headers = ["ID Constructora", "Fono", "Email"]
+                            table = [rep]
+                            print(tabulate(table, headers=headers, tablefmt="grid"))
+                        else:
+                            print('El ID no se encuentra en la base de datos')
+                    except Exception as err:
+                        print("Error al mostrar nueva constructora recien creada: ", err)
+                        
                 except Exception as err:
                     self.conexion.rollback()
                     print("Error al crear la constructora:", err)
@@ -144,29 +153,30 @@ class DataBaseMD5():
             
     #READ
     def read_constructora(self):    
-        id_buscar = input('Ingrese ID de constructora a buscar = \n')
-    
-        sql = 'select * from constructoras where idconstructora = '+repr(id_buscar) 
-        #repr agrega cremillas al cod
+        id_buscar = input('Ingrese ID de constructora a buscar: \n')
+        
+        sql = f"SELECT * FROM constructoras WHERE idconstructora = {repr(id_buscar)}"
+        # repr agrega comillas al código
         try:
             self.cursor.execute(sql)
-            rep = self.cursor.fetchone()
+            rep = self.cursor.fetchone() 
             if rep is not None:
-                print((
-                f"{'ID Constructora':10}"
-                f"{'Fono ':20}"
-                f"{'Email ':12}"
-                ))
+                # Encabezados de las columnas
+                headers = ["ID Constructora", "Fono", "Email"]
                 
-                print(f"{rep[0]:10}{rep[1]:20}{rep[2]:12}")
+                # Crear tabla con los datos recuperados
+                table = [rep]  # 'rep' ya es una tupla que se puede tabular
+                
+                print(tabulate(table, headers=headers, tablefmt="grid"))
             else:
-                print('Id no existe en la base de datos')
+                print('El ID no existe en la base de datos')
         except Exception as err:
-            print("Error al realizar la consulta", err) 
+            print("Error al realizar la consulta:", err)
             
     #UPDATE
     def update_constructoras(self):
         #Llamar una funcion dentro de otra
+        #Eliminar si no se necesita mostrar todas las constructoras
         self.list_constructoras()
         
         id_buscar = input('Ingrese ID de constructora que desea actualizar = \n')
@@ -176,33 +186,43 @@ class DataBaseMD5():
             rep=self.cursor.fetchone()
             if rep!= None:
                 print("Información actual de la constructora:")
-                print("---------------------------------------------------------")
-                print((
-                    f"{'ID Constructora':20}"
-                    f"{'Fono ':20}"
-                    f"{'Email ':12}"
-                    ))
-                print(f"{rep[0]:20}{rep[1]:20}{rep[2]:12}")
-                print("---------------------------------------------------------")
+                if rep is not None:
+                    headers = ["ID Constructora", "Fono", "Email"]
+                    table = [rep]
+                    print(tabulate(table, headers=headers, tablefmt="grid")) 
                 ##Da la opcion de elegir que desea modificar
                 elige=input('\n Que desea modificar?\n fono(f)\n email(e)\n').lower()
                 if elige=='f':
                     campo='fono'
                     nuevo=input('Ingrese nuevo fono = ')
                     print("Fono actualizado exitosamente.")
+                    print("--------------------------------")
                 if elige=='e':
                     campo='email'
                     nuevo=input('Ingrese nuevo email = ')
                     print("Email actualizado exitosamente.")
+                    print("--------------------------------")
 
                 sql2 = 'update constructoras set '+campo+'='+repr(nuevo)+' where idconstructora='+repr(id_buscar)
+                
                 try:
                     self.cursor.execute(sql2)
                     self.conexion.commit()
                     print("Actualización realizada con éxito.")
+                    
+                    sql3 = 'select * from constructoras where idconstructora='+repr(id_buscar)
+                    
+                    self.cursor.execute(sql3)
+                    rep=self.cursor.fetchone()
+                    
+                    if rep is not None:
+                        headers = ["ID Constructora", "Fono", "Email"]
+                        table = [rep]
+                        print(tabulate(table, headers=headers, tablefmt="grid")) 
+                        
                 except Exception as err:
                     self.conexion.rollback()
-                    print("No existe una constructora con ese ID. Intente con otro ID")
+                    print("Hubo un error al actualizar la constructora")
             else:
                 print('No existe ese código')
         except Exception as err: 
@@ -270,7 +290,6 @@ class DataBaseMD5():
                 self.delete_constructora()
             elif elige == 'f':
                 print('Fin')
-                self.cerrarBD()
                 break
             else:
                 print('Error de opción')
@@ -309,19 +328,13 @@ class DataBaseMD5():
             self.cursor.execute(sql)
             repu = self.cursor.fetchall()
 
-            # Encabezados en consola
-            print((
-                f"{'Cod. Obra ':10}"
-                f"{'Id Construct. ':20}"
-                f"{'Descrip. Obra ':20}"
-                f"{'Costo Obra ':12}"
-                f"{'Fecha Inicio ':12}"
-            ))
-
-            # Imprimir registros en consola
-            for rep in repu:
-                print(f"{rep[0]:12}{rep[1]:20}{rep[2]:20}{rep[3]:<12}{rep[4].strftime('%d/%m/%Y'):12}")
-
+            if repu is not None:
+                # Encabezados de las columnas
+                headers = ["Codigo Obra", "ID Constructora", "Descripcion","Costo","Fecha Inicio"]
+                
+                # Crear tabla con los datos recuperados                
+                print(tabulate(repu, headers=headers, tablefmt="grid"))
+                
             # Preguntar si se desea generar el PDF
             opcion = input("Desea generar un PDF con este listado? (s/n): ").lower()
             if opcion == 's':
@@ -329,23 +342,7 @@ class DataBaseMD5():
 
         except Exception as err:
             print("Error al listar obras:", err)
-            
-        # sql = 'select * from obras'
-        # try:
-        #     self.cursor.execute(sql)
-        #     repu = self.cursor.fetchall()
-        #     print((
-        #     f"{'Cod. Obra ':10}"
-        #     f"{'Id Construct. ':20}"
-        #     f"{'Descrip. Obra ':20}"
-        #     f"{'Costo Obra ':12}"
-        #     f"{'Fecha Inicio ':12}"
-        #     ))
-        #     for rep in repu:
-        #         print(f"{rep[0]:12}{rep[1]:20}{rep[2]:20}{rep[3]:<12}{rep[4].strftime('%d/%m/%Y'):12}")
-        # except Exception as err:
-        #     print(err)
-            
+
     #CREATE
     def create_obras(self):
         codigo_obra = input('Ingrese ID de la Obra = \n')
@@ -378,7 +375,6 @@ class DataBaseMD5():
                             print("Formato de fecha incorrecto. Debe ser aaaa-mm-dd.")
                             return
                         
-                        print("---------------------------------------------")
                         print("Preparando para insertar en la base de datos...")
                         # Insertar en la base de datos
                         sql3 = "insert into obras (codigoObra, idConstructora, descripcionobra, costo, fechainicio) VALUES (" \
@@ -389,15 +385,25 @@ class DataBaseMD5():
                             self.conexion.commit()
                             time.sleep(1) 
                             print("Obra agregada exitosamente...")
-                            print("---------------------------------------------")
-
+                            
+                            sql_idbuscado = f"SELECT * FROM obras WHERE codigoObra = {repr(codigo_obra)}"
+                            try: 
+                                self.cursor.execute(sql_idbuscado)# Ejecutar la consulta SQL
+                                rep = self.cursor.fetchone() # Obtener el resultado
+                                if rep is not None: #Si rep es distinto de ninguno
+                                    headers = ["Codigo Obra", "ID Constructora", "Descripcion","Costo","Fecha Inicio"]
+                                    table = [rep]
+                                    print(tabulate(table, headers=headers, tablefmt="grid"))
+                                else:
+                                    print('El codigo no se encuentra en la base de datos')
+                            except Exception as err:
+                                print("Error al mostrar nueva Obra recien creada: ", err)
+                                
                         except Exception as err:
                             self.conexion.rollback()
                             print("Error al insertar la obra:", err)
                     else:
-                        print("---------------------------------------------")
                         print("El ID de la Constructora no existe. Por favor, verifique y vuelva a intentarlo.")
-                        print("---------------------------------------------")
 
                 except Exception as err:
                     print("Error al verificar el ID de la Constructora:", err)
@@ -418,15 +424,13 @@ class DataBaseMD5():
             self.cursor.execute(sql)
             rep = self.cursor.fetchone()
             if rep is not None:
-                print((
-                f"{'Codigo Obra':10}"
-                f"{'Ide Constructora ':20}"
-                f"{'Descripcion ':12}"
-                f"{'Costo ':12}"
-                f"{'Fecha Inicio':12}"
-                ))
+                # Encabezados de las columnas
+                headers = ["Codigo Obra", "ID Constructora", "Descripcion","Costo","Fecha Inicio"]
                 
-                print(f"{rep[0]:10}{rep[1]:20}{rep[2]:20}{rep[3]:<12}{rep[4].strftime('%d/%m/%Y'):12}")
+                # Crear tabla con los datos recuperados
+                table = [rep]  # 'rep' ya es una tupla que se puede tabular
+                
+                print(tabulate(table, headers=headers, tablefmt="grid"))
             else:
                 print('Codigo no existe en la base de datos')
         except Exception as err:
@@ -444,16 +448,14 @@ class DataBaseMD5():
         try:
             self.cursor.execute(sql1)
             rep=self.cursor.fetchone()
-            if rep!= None:
-                print((
-                f"{'Codigo Obra':13}"
-                f"{'Id Constructora ':20}"
-                f"{'Descripcion':15}"
-                f"{'Costo ':12}"
-                f"{'Fecha Inicio':12}"
-                ))
+            if rep is not None:
+                # Encabezados de las columnas
+                headers = ["Codigo Obra", "ID Constructora", "Descripcion","Costo","Fecha Inicio"]
                 
-                print(f"{rep[0]:13}{rep[1]:20}{rep[2]:15}{rep[3]:<12}{rep[4].strftime('%d/%m/%Y'):12}")
+                # Crear tabla con los datos recuperados                
+                print(tabulate(rep, headers=headers, tablefmt="grid"))
+            
+
                 elige=input('\n Que desea modificar?\n Descripcion(d)\n Costo(c)\n').lower()
                 if elige=='d':
                     campo='descripcionObra'
@@ -503,7 +505,6 @@ class DataBaseMD5():
                         
             elif elige == 'f':
                 print('Fin')
-                self.cerrarBD()
                 break
             else:
                 print('Error de opción')
